@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta
+      charset="utf-8"
+      name="viewport"
+      content="width=device-width, initial-scale=1"
+    />
+    <title></title>
+  </head>
+  <body>
+    <div id="container">
+      <div class="score-record">
+        <p>当前得分</p>
+        <p id="score">0</p>
+      </div>
+      <div class="game-over hidden" id="game-over">
+        <p>🐔寄🐔</p>
+        <button id="againBtn">再来一次</button>
+      </div>
+      <div class="game-over" id="game-begin">
+        <p>🐔</p>
+        <button id="beginBtn">-开始-</button>
+      </div>
+      <canvas id="canvas" class="my-canvas"></canvas>
+    </div>
+  </body>
+  <script>
+    let cvs = document.getElementById("canvas");
+    let ctx = cvs.getContext("2d");
+    // cvs.width = window.innerWidth;
+    // cvs.height = window.innerHeight;
+    let width = 20;
+    let height = 20;
+    cvs.width = Math.floor(window.innerWidth / width) * width;
+    cvs.height = Math.floor(window.innerHeight / height) * height;
+    // cvs.width = width * 20;
+    // cvs.height = height * 10;
+    let over = false;
+    let preBody = [];
+    let score = 0;
+    let speed = 2;
+    class Rect {
+      constructor(x, y, w, h, c) {
+        this.x = x;
+        this.y = y;
+        this.width = w;
+        this.height = h;
+        this.color = c;
+      }
+      draw() {
+        ctx.beginPath();
+        ctx.fillStyle = this.color;
+        ctx.strokeStyle = "#fff";
+        ctx.lineWidth = 5;
+        ctx.lineCap = "round";
+        ctx.fillRect(this.x, this.y, this.width, this.height);
+        ctx.strokeRect(this.x, this.y, this.width, this.height);
+      }
+    }
+    class Snake {
+      constructor(length = 0) {
+        this.length = length;
+        this.head = new Rect(0, 0, width, height, "#f66");
+        this.direction = 2;
+        console.log(this.head);
+        this.body = [];
+        let x = -width;
+        let y = 0;
+        for (let i = 0; i < length; i++) {
+          this.body.push(new Rect(x, y, width, height, "#fab"));
+          x -= width;
+        }
+      }
+      drawSnake() {
+        this.head.draw();
+        this.body.map((v) => {
+          v.draw();
+        });
+      }
+      move() {
+        const rect = new Rect(
+          this.head.x,
+          this.head.y,
+          width,
+          height,
+          this.body[0].color
+        );
+        this.body.unshift(rect);
+        this.body.pop();
+        switch (this.direction) {
+          case 2: {
+            //right
+            const head = new Rect(
+              this.head.x + width,
+              this.head.y,
+              width,
+              height,
+              this.head.color
+            );
+            console.log(head);
+            this.head = head;
+            break;
+          }
+          case 0: {
+            //left
+            const head = new Rect(
+              this.head.x - width,
+              this.head.y,
+              width,
+              height,
+              this.head.color
+            );
+            this.head = head;
+            break;
+          }
+          case 1: {
+            //top
+            const head = new Rect(
+              this.head.x,
+              this.head.y + height,
+              width,
+              height,
+              this.head.color
+            );
+            this.head = head;
+            break;
+          }
+          case 3: {
+            //bottom
+            const head = new Rect(
+              this.head.x,
+              this.head.y - height,
+              width,
+              height,
+              this.head.color
+            );
+            this.head = head;
+            break;
+          }
+        }
+      }
+    }
+    let snake = new Snake(3);
+    let foods = [];
+    const drawArr = (arr = []) => {
+      arr.map((v) => {
+        v.draw();
+      });
+    };
+    console.log(snake);
+    snake.drawSnake();
+    const changeDir = (dir) => {
+      switch (dir) {
+        case 2:
+          snake.direction = snake.direction === 0 ? 0 : 2;
+          console.log(snake.direction);
+          break;
+        case 0:
+          snake.direction = snake.direction === 2 ? 2 : 0;
+          console.log(snake.direction);
+          break;
+        case 1:
+          snake.direction = snake.direction === 3 ? 3 : 1;
+          console.log(snake.direction);
+          break;
+        case 3:
+          snake.direction = snake.direction === 1 ? 1 : 3;
+          console.log(snake.direction);
+          break;
+      }
+    };
+    document.onkeydown = function (e) {
+      let event = e || window.event;
+      console.log(event.key);
+      // 左37  上38  右39  下40
+      switch (event.key) {
+        case "ArrowRight":
+          changeDir(2);
+          break;
+        case "ArrowLeft":
+          changeDir(0);
+          break;
+        case "ArrowDown":
+          changeDir(1);
+          break;
+        case "ArrowUp":
+          changeDir(3);
+          break;
+      }
+    };
+    const judgeOver = function () {
+      let hx = snake.head.x;
+      let hy = snake.head.y;
+      if (hx < 0 || hx > cvs.width - 20 || hy < 0 || hy > cvs.height - 20)
+        over = true;
+      snake.body.forEach((v, i) => {
+        let bx = v.x;
+        let by = v.y;
+        if (bx < hx + 10 && bx > hx - 10 && by < hy + 10 && by > hy - 10) {
+          over = true;
+        }
+      });
+      over && console.log("再来一次");
+    };
+    const dropFood = () => {
+      if (foods.length < 5) {
+        let x = Math.floor(Math.random() * (cvs.width / width)) * width;
+        let y = Math.floor(Math.random() * (cvs.height / height)) * height;
+        console.log("xy:", x, y);
+        const food = new Rect(x, y, width, height, "#2f9f8f");
+        foods.push(food);
+      }
+    };
+    const judgeFood = () => {
+      foods.forEach((v, i) => {
+        if (v.x === snake.head.x && v.y === snake.head.y) {
+          foods.splice(i, 1);
+          console.log("eat");
+          let x = snake.body[snake.body.length - 1].x;
+          let y = snake.body[snake.body.length - 1].y;
+          let offsetX =
+            snake.body[snake.body.length - 2].x -
+            snake.body[snake.body.length - 1].x;
+          let offsetY =
+            snake.body[snake.body.length - 2].y -
+            snake.body[snake.body.length - 1].y;
+          snake.body.push(
+            new Rect(
+              x - offsetX,
+              y - offsetY,
+              width,
+              height,
+              snake.body[0].color
+            )
+          );
+          addScore();
+          clearInterval(moveTimer);
+          speed += 0.5;
+          moveTimer = setInterval(() => {
+            animate();
+          }, (6 / Math.sqrt(speed)) * 20 + 40);
+        }
+      });
+    };
+    const addScore = () => {
+      score += 1;
+      document.getElementById("score").innerHTML = score;
+    };
+    const animate = () => {
+      preBody = snake.body;
+      snake.move();
+      judgeOver();
+      judgeFood();
+      if (!over) {
+        ctx.clearRect(0, 0, cvs.width, cvs.height);
+        snake.drawSnake();
+        drawArr(foods);
+      } else {
+        clearInterval(moveTimer);
+        clearInterval(foodTimer);
+        document.getElementById("game-over").classList.remove("hidden");
+      }
+      console.log("aniMove");
+    };
+    const reStart = (s) => {
+      snake = new Snake(3);
+      foods = [];
+      over = false;
+      speed = 2;
+      score = 0;
+      document.getElementById("score").innerHTML = score;
+      if (window.innerWidth > 900) speed = speed + 2.8;
+      moveTimer = setInterval(() => {
+        animate();
+      }, (6 / Math.sqrt(speed)) * 50 + 20);
+      foodTimer = setInterval(() => {
+        dropFood();
+      }, 3000);
+    };
+    document.getElementById("againBtn").addEventListener("click", () => {
+      setTimeout(() => {
+        reStart(speed);
+        document.getElementById("game-over").classList.add("hidden");
+      }, 200);
+    });
+    document.getElementById("beginBtn").addEventListener("click", (el, e) => {
+      setTimeout(() => {
+        reStart(speed);
+        document.getElementById("game-begin").classList.add("hidden");
+      }, 200);
+    });
+    //移动端滑动输入
+    let startX, startY;
+    const getAng = (x, y) => {
+      return (Math.atan2(y, x) * 180) / Math.PI;
+    };
+    document.addEventListener("touchstart", (e) => {
+      startX = e.touches[0].pageX;
+      startY = e.touches[0].pageY;
+    });
+    const computeDir = (sX, sY, eX, eY) => {
+      if (Math.abs(eX - sX) < 2 && Math.abs(eY - sY) < 2) return 0; //过短
+      let ang = getAng(-(eX - sX), -(eY - sY));
+      if (ang > 45 && ang < 135) return 3; //top
+      else if (ang <= 45 && ang > -45) return 0; //left
+      else if (ang <= -45 && ang > -135) return 1; //bottom
+      else if ((ang >= 135 && ang < 180) || (ang <= -135 && ang > -180))
+        return 2; //right
+    };
+    document.addEventListener("touchend", (e) => {
+      let endX = e.changedTouches[0].pageX,
+        endY = e.changedTouches[0].pageY;
+      let direction = computeDir(startX, startY, endX, endY);
+      changeDir(direction);
+      console.log(direction);
+    });
+  </script>
+  <style>
+    * {
+      padding: 0;
+      margin: 0;
+    }
+    html {
+      height: 100%;
+    }
+    body {
+      height: 100%;
+      width: 100%;
+    }
+    #container {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      background-color: rgb(70, 41, 70);
+    }
+    .my-canvas {
+      border: 2px black solid;
+      box-sizing: border-box;
+      width: 100%;
+    }
+    .score-record {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-around;
+      border: 2rem #fff ridge;
+      width: 20rem;
+      height: 12rem;
+      position: absolute;
+      text-align: center;
+      color: #fff;
+      font-size: 3rem;
+      top: 2rem;
+      border-radius: 5rem;
+      background-color: rgba(48, 101, 105, 0.144);
+    }
+    .game-over {
+      width: 40rem;
+      height: 60rem;
+      top: 30rem;
+      border-radius: 2rem;
+      background-color: #fff;
+      display: flex;
+      align-items: center;
+      flex-direction: column;
+      justify-content: center;
+      position: absolute;
+      font-size: 8rem;
+    }
+    .game-over button {
+      width: 80%;
+      border-radius: 2rem;
+      border: rgb(255, 255, 255) 1rem solid;
+      height: 10rem;
+      font-size: 3rem;
+      font-weight: 500;
+      margin-top: 8rem;
+      background-color: rgb(212, 218, 231);
+    }
+    .game-over button:active {
+      background-color: rgb(161, 166, 168);
+    }
+    .hidden {
+      display: none;
+    }
+    @media only screen and (max-width: 600px) {
+      html {
+        font-size: 5px;
+      }
+    }
+    @media only screen and (min-width: 900px) {
+      html {
+        font-size: 7px;
+      }
+    }
+  </style>
+</html>
